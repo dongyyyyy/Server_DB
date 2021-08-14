@@ -1,15 +1,21 @@
-from flask import Flask,request  # 서버 구현을 위한 Flask 객체 import
+from flask import Flask,request,send_file  # 서버 구현을 위한 Flask 객체 import
 from flask_restx import Api, Resource  # Api 구현을 위한 Api 객체 import
+import jsonpickle
+import cv2
 import pymysql
 import sys
 import json
+import os
+import base64
+from werkzeug.utils import secure_filename
+
 from datetime import datetime
 from PyQt5.QtWidgets import QApplication, QWidget
 import requests
 app = Flask(__name__)  # Flask 객체 선언, 파라미터로 어플리케이션 패키지의 이름을 넣어줌.
 api = Api(app)  # Flask 객체에 Api 객체 등록
 
-conn = pymysql.connect(host='localhost',port=3306,user='pass',password='pass',db='face_recognition',charset='utf8')
+conn = pymysql.connect(host='localhost',port=3306,user='root',password='root',db='face_recognition',charset='utf8')
 curs = conn.cursor()
 
 
@@ -63,20 +69,28 @@ def new_picture():
     # print(len(rows))
     return str
 
-class MyApp(QWidget):
+@app.route('/file_upload', methods=['GET', 'POST'])
+def upload_files():
+    if request.method == 'POST':
+        f = request.files['file']
+        fname = secure_filename(f.filename)
+        path = os.path.join('D:/', fname)
+        f.save(path)
+        return 'File upload complete (%s)' % path
 
-    def __init__(self):
-        super().__init__()
-        self.initUI()
+@app.route('/csv_file_download_with_file')
+def csv_file_download_with_file():
+    file_name = f"D:/biden.jpg"
+    data = {}
 
-    def initUI(self):
-        self.setWindowTitle('My First Application')
-        self.move(300, 300)
-        self.resize(400, 200)
-        self.show()
+    img = cv2.imread(file_name,cv2.IMREAD_COLOR)
+    img_str = base64.b64encode(cv2.imencode('.jpg',img)[1]).decode()
+    img_dict = {'img':img_str}
+    img_dict = json.dumps(img_dict)
+
+    return img_dict
+
 
 if __name__ == "__main__":
-    # app = QApplication(sys.argv)
-    # ex = MyApp()
-    # sys.exit(app.exec_())
+
     app.run(debug=True, host='0.0.0.0', port=80)
